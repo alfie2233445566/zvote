@@ -136,6 +136,10 @@ async function sendViaResend({ to, subject, html, from }) {
  * Diagnostic test for SMTP/Resend connection
  */
 export async function testSmtpConnection() {
+  if (process.env.BREVO_API_KEY) {
+    return { ok: true, provider: "Brevo HTTPS API (Direct Delivery)", sender: process.env.SMTP_USER || "alfie2233445566@gmail.com" };
+  }
+
   if (process.env.RESEND_API_KEY) {
     return { ok: true, provider: "Resend HTTPS API (Active)", user: process.env.ADMIN_EMAIL || "alfie2233445566@gmail.com" };
   }
@@ -143,7 +147,7 @@ export async function testSmtpConnection() {
   const user = process.env.SMTP_USER;
   const pass = process.env.SMTP_PASS;
   if (!user || !pass) {
-    return { ok: false, error: "Neither RESEND_API_KEY nor SMTP_USER/SMTP_PASS are set." };
+    return { ok: false, error: "Neither BREVO_API_KEY, RESEND_API_KEY nor SMTP_USER/SMTP_PASS are set." };
   }
   try {
     const transporter = await getTransporter();
@@ -159,6 +163,14 @@ export async function testSmtpConnection() {
  * Sends a single test email to confirm live delivery
  */
 export async function sendTestEmail(targetEmail) {
+  if (process.env.BREVO_API_KEY) {
+    return await sendViaBrevo({
+      to: targetEmail,
+      subject: "ZVote — Email Delivery Verified via Brevo HTTPS!",
+      html: "<p>Congratulations! Your ZVote live email delivery system is working via Brevo HTTPS API.</p>",
+    });
+  }
+
   if (process.env.RESEND_API_KEY) {
     const res = await sendViaResend({
       to: targetEmail,
