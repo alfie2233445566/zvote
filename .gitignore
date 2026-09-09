@@ -31,3 +31,8 @@ backend/generated/
 .vscode/
 .idea/
 
+# Local Defense Documentation (Never push to remote)
+addons/*.pdf
+addons/*DEFENSE*
+addons/generate_defense_pdf.py
+
