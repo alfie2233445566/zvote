@@ -39,6 +39,42 @@ async function getTransporter() {
 }
 
 /**
+ * Helper to send email via Brevo HTTPS REST API (Port 443, delivers to any external inbox without custom domain)
+ */
+async function sendViaBrevo({ to, name, subject, html, fromEmail, fromName }) {
+  const apiKey = process.env.BREVO_API_KEY;
+  if (!apiKey) return null;
+
+  const senderEmail = fromEmail || process.env.SMTP_USER || "alfie2233445566@gmail.com";
+  const senderName = fromName || "ZVote Electoral Commission";
+
+  try {
+    const res = await fetch("https://api.brevo.com/v3/smtp/email", {
+      method: "POST",
+      headers: {
+        accept: "application/json",
+        "api-key": apiKey,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        sender: { name: senderName, email: senderEmail },
+        to: [{ email: to, name: name || to }],
+        subject,
+        htmlContent: html,
+      }),
+    });
+
+    const data = await res.json();
+    if (res.ok) {
+      return { success: true, method: "brevo", messageId: data.messageId };
+    }
+    return { success: false, error: data.message || "Brevo API error" };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+}
+
+/**
  * Helper to send email via Resend HTTPS REST API (Port 443, 100% permitted on Render Free tier)
  */
 async function sendViaResend({ to, subject, html, from }) {
@@ -204,7 +240,21 @@ export async function sendBulkRegistrationEmail(email, fullName, indexNumber, te
     </div>
   `;
 
-  // 1. Try Resend HTTPS API first if RESEND_API_KEY is configured
+  // 1. Try Brevo HTTPS API (delivers directly to external student inboxes without requiring a custom domain)
+  if (process.env.BREVO_API_KEY) {
+    const brevoResult = await sendViaBrevo({
+      to: email,
+      name: fullName,
+      subject: "Welcome to ZVote — Your Voting Account Credentials",
+      html: emailHtml,
+    });
+    if (brevoResult && brevoResult.success) {
+      console.log(`  [BREVO SUCCESS] Message sent via HTTPS to student ${email} (ID: ${brevoResult.messageId})`);
+      return brevoResult;
+    }
+  }
+
+  // 2. Try Resend HTTPS API if RESEND_API_KEY is configured
   if (process.env.RESEND_API_KEY) {
     const resendResult = await sendViaResend({
       to: email,
@@ -315,6 +365,18 @@ export async function sendPasswordResetEmail(email, resetToken, resetUrl) {
       <p style="color: #94a3b8; font-size: 12px;">If you did not request this password reset, please disregard this message.</p>
     </div>
   `;
+
+  if (process.env.BREVO_API_KEY) {
+    const brevoRes = await sendViaBrevo({
+      to: email,
+      subject: "ZVote Password Reset Request",
+      html: resetHtml,
+    });
+    if (brevoRes && brevoRes.success) {
+      console.log(`  [BREVO SUCCESS] Password reset link sent to ${email}`);
+      return { success: true };
+    }
+  }
 
   if (process.env.RESEND_API_KEY) {
     const res = await sendViaResend({
