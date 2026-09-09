@@ -10,13 +10,27 @@ import adminRoutes from "./routes/admin.js";
 
 const app = express();
 
-const allowedOrigins = (process.env.CORS_ORIGIN || "http://localhost:5173")
+const configuredOrigins = (process.env.CORS_ORIGIN || "http://localhost:5173,https://zvote.netlify.app")
   .split(",")
   .map((origin) => origin.trim());
 
 app.use(
   cors({
-    origin: allowedOrigins,
+    origin: (origin, callback) => {
+      // Allow server-to-server, mobile, or direct curl requests with no origin
+      if (!origin) return callback(null, true);
+
+      // Check if wildcard, explicitly listed, or Netlify domain
+      if (
+        configuredOrigins.includes("*") ||
+        configuredOrigins.includes(origin) ||
+        origin.endsWith(".netlify.app") ||
+        origin.includes("localhost")
+      ) {
+        return callback(null, true);
+      }
+      return callback(new Error(`CORS blocked for origin: ${origin}`));
+    },
     credentials: true,
   }),
 );
