@@ -106,6 +106,11 @@ const managedSigner = new NonceManager(electionAuthorityWallet);
  * @returns {Promise<string>} The address of the newly deployed contract.
  */
 export async function deployElectionContract() {
+  if (CONTRACT_ADDRESS && CONTRACT_ADDRESS.startsWith("0x") && CONTRACT_ADDRESS.length === 42 && CONTRACT_ADDRESS !== "0xdeployedContractAddressHere") {
+    console.log(`[blockchain.js] Using pre-configured CONTRACT_ADDRESS: ${CONTRACT_ADDRESS}`);
+    return CONTRACT_ADDRESS;
+  }
+
   try {
     const abi = loadAbi();
     const bytecode = loadBytecode();
@@ -114,10 +119,6 @@ export async function deployElectionContract() {
     await zVote.waitForDeployment();
     return await zVote.getAddress();
   } catch (err) {
-    if (CONTRACT_ADDRESS && CONTRACT_ADDRESS.startsWith("0x") && CONTRACT_ADDRESS.length === 42 && CONTRACT_ADDRESS !== "0xdeployedContractAddressHere") {
-      console.warn(`[blockchain.js] deployElectionContract failed (${err.message}). Using pre-configured CONTRACT_ADDRESS: ${CONTRACT_ADDRESS}`);
-      return CONTRACT_ADDRESS;
-    }
     throw err;
   }
 }
