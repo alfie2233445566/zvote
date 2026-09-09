@@ -1,0 +1,147 @@
+// ZVote database schema.
+//
+// Design principle (from the project brief): the database stores everything that is
+// NOT a vote -- users/voter registry, election configuration, positions, candidates,
+// and a vote-receipt audit log. Actual vote choices live only on the ZVote smart
+// contract; VoteReceipt below stores only the fact that a vote was cast and its
+// transaction hash, never the candidate that was chosen.
+//
+// Note on architecture: Chapter Three of the project report describes MongoDB as the
+// off-chain store. This implementation uses PostgreSQL + Prisma instead, per the
+// technical specification supplied for this build. The relational model is a better
+// fit here because election data is inherently relational (elections -> positions ->
+// candidates, users -> vote receipts) with real foreign-key integrity constraints
+// (e.g. "a candidate must belong to an existing position"), which Postgres enforces
+// natively. The responsibilities described in Chapter Three (Section 3.2.4 / 3.3.3)
+// are preserved exactly -- only the storage engine changed.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  VOTER
+  ADMIN
+}
+
+enum ElectionStatus {
+  PENDING
+  ACTIVE
+  CLOSED
+}
+
+enum ElectionScope {
+  SCHOOL_WIDE
+  DEPARTMENT
+}
+
+model User {
+  id                   String   @id @default(uuid())
+  studentId            String   @unique
+  email                String   @unique
+  passwordHash         String
+  fullName             String
+  department           String?  // Department affiliation, used for department-level election filtering
+  program              String?  // Program of study
+  level                String?  // Academic level
+  role                 Role     @default(VOTER)
+  // Deterministic wallet address representing this voter on-chain. Generated once at
+  // registration time; the voter never sees or handles the corresponding private key.
+  walletAddress        String   @unique
+  mustChangePassword   Boolean  @default(false) // Flag for first-login password change
+  createdAt            DateTime @default(now())
+
+  voteReceipts         VoteReceipt[]
+  passwordResets       PasswordReset[]
+
+  @@map("users")
+}
+
+model Election {
+  id              String         @id @default(uuid())
+  title           String
+  startTime       DateTime
+  endTime         DateTime
+  status          ElectionStatus @default(PENDING)
+  // Address of the ZVote contract this election's positions/candidates were
+  // registered against on-chain.
+  contractAddress String
+  // Scope: SCHOOL_WIDE elections are visible to all voters; DEPARTMENT elections
+  // are visible only to voters whose department field matches targetDepartment.
+  scope           ElectionScope  @default(SCHOOL_WIDE)
+  // Only set when scope is DEPARTMENT; null for SCHOOL_WIDE elections.
+  targetDepartment String?
+  createdAt       DateTime       @default(now())
+
+  positions       Position[]
+
+  @@map("elections")
+}
+
+model Position {
+  id             String   @id @default(uuid())
+  title          String
+  // Index of this position inside the ZVote contract (positionId returned by
+  // createPosition). Needed so the backend knows which on-chain position to call.
+  onChainId      Int
+  electionId     String
+  election       Election @relation(fields: [electionId], references: [id], onDelete: Cascade)
+  createdAt      DateTime @default(now())
+
+  candidates     Candidate[]
+  voteReceipts   VoteReceipt[]
+
+  @@unique([electionId, onChainId])
+  @@map("positions")
+}
+
+model Candidate {
+  id          String   @id @default(uuid())
+  name        String
+  programme   String
+  pictureUrl  String?
+  bio         String?
+  studentId   String?
+  // Index of this candidate inside the position's candidate array on-chain.
+  onChainId   Int
+  positionId  String
+  position    Position @relation(fields: [positionId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+
+  @@unique([positionId, onChainId])
+  @@map("candidates")
+}
+
+model VoteReceipt {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  positionId  String
+  position    Position @relation(fields: [positionId], references: [id], onDelete: Cascade)
+  // Transaction hash returned by the blockchain, shown to the voter as a receipt and
+  // usable to independently verify the vote on Polygonscan.
+  txHash      String
+  createdAt   DateTime @default(now())
+
+  // A voter may only ever have one receipt per position -- this is the database-level
+  // mirror of the on-chain hasVoted() guarantee.
+  @@unique([userId, positionId])
+  @@map("vote_receipts")
+}
+
+model PasswordReset {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique // Hash of the reset token (not the token itself)
+  expiresAt DateTime // Token expires after 1 hour
+  used      Boolean  @default(false) // Prevent token reuse
+  createdAt DateTime @default(now())
+
+  @@map("password_resets")
+}

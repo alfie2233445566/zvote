@@ -1,0 +1,22 @@
+{
+  "name": "zvote-blockchain",
+  "version": "1.0.0",
+  "description": "ZVote smart contract layer (Hardhat 3 + ethers v6). Deployable to a local Hardhat node or to the Polygon Amoy testnet.",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "compile": "hardhat compile",
+    "test": "hardhat test",
+    "node": "hardhat node",
+    "deploy:localhost": "hardhat run scripts/deploy.js --network localhost",
+    "deploy:amoy": "hardhat run scripts/deploy.js --network amoy",
+    "clean": "hardhat clean"
+  },
+  "devDependencies": {
+    "hardhat": "^3.9.1",
+    "@nomicfoundation/hardhat-toolbox-mocha-ethers": "^3.0.6"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5"
+  }
+}

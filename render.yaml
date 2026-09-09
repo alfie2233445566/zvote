@@ -1,0 +1,40 @@
+services:
+  # -------------------------------------------------------------
+  # ZVote Backend API Web Service
+  # -------------------------------------------------------------
+  - type: web
+    name: zvote-backend
+    runtime: node
+    plan: free
+    rootDir: backend
+    buildCommand: npm install && npx prisma generate && npx prisma migrate deploy
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: DATABASE_URL
+        fromDatabase:
+          name: zvote-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: CORS_ORIGIN
+        value: https://zvote.netlify.app
+      - key: RPC_URL
+        value: https://polygon-amoy.drpc.org
+      - key: CONTRACT_ADDRESS
+        sync: false
+      - key: PRIVATE_KEY
+        sync: false
+
+databases:
+  # -------------------------------------------------------------
+  # Managed PostgreSQL Database (Free Tier)
+  # -------------------------------------------------------------
+  - name: zvote-db
+    plan: free
+    databaseName: zvote
+    user: zvote_user

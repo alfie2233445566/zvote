@@ -1,0 +1,33 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Environment files (never commit real secrets)
+.env
+.env.*
+.env.local
+**/.env
+**/.env.*
+!.env.example
+!**/.env.example
+
+# Build output
+dist/
+**/dist/
+build/
+**/build/
+
+# Hardhat
+blockchain/cache/
+blockchain/artifacts/
+blockchain/typechain-types/
+
+# Prisma
+backend/generated/
+
+# Editor/OS
+.DS_Store
+*.log
+.vscode/
+.idea/
+
