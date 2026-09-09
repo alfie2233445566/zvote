@@ -26,6 +26,20 @@ router.post("/upload-image", requireAuth, requireAdmin, upload.single("image"), 
 // Bulk registration
 router.post("/bulk-register", requireAuth, requireAdmin, upload.single("file"), bulkRegisterStudents);
 
+// SMTP diagnostics
+router.get("/smtp-test", requireAuth, requireAdmin, async (req, res) => {
+  const { testSmtpConnection } = await import("../services/emailService.js");
+  const result = await testSmtpConnection();
+  return res.json(result);
+});
+
+router.post("/test-email", requireAuth, requireAdmin, async (req, res) => {
+  const { sendTestEmail } = await import("../services/emailService.js");
+  const targetEmail = req.body.email || req.user.email;
+  const result = await sendTestEmail(targetEmail);
+  return res.json(result);
+});
+
 // Admin students view
 router.get("/students", requireAuth, requireAdmin, getStudents);
 router.get("/departments", requireAuth, requireAdmin, getDepartments);

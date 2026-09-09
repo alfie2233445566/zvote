@@ -11,8 +11,9 @@ async function getTransporter() {
   const host = process.env.SMTP_HOST;
   const port = process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT, 10) : 587;
   const user = process.env.SMTP_USER;
-  const pass = process.env.SMTP_PASS;
-  const service = process.env.SMTP_SERVICE;
+  const pass = process.env.SMTP_PASS ? process.env.SMTP_PASS.replace(/\s+/g, "") : "";
+  const isGmail = (user && user.includes("@gmail.com")) || (host && host.includes("gmail"));
+  const service = process.env.SMTP_SERVICE || (isGmail ? "gmail" : undefined);
 
   // Real SMTP configured (Host/User/Pass or Service/User/Pass)
   if ((host || service) && user && pass) {
@@ -35,6 +36,46 @@ async function getTransporter() {
   }
 
   return null;
+}
+
+/**
+ * Diagnostic test for SMTP connection
+ */
+export async function testSmtpConnection() {
+  const user = process.env.SMTP_USER;
+  const pass = process.env.SMTP_PASS;
+  if (!user || !pass) {
+    return { ok: false, error: "SMTP_USER or SMTP_PASS not set in environment." };
+  }
+  try {
+    const transporter = await getTransporter();
+    if (!transporter) return { ok: false, error: "Could not create mail transporter." };
+    await transporter.verify();
+    return { ok: true, user };
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+}
+
+/**
+ * Sends a single test email to confirm live delivery
+ */
+export async function sendTestEmail(targetEmail) {
+  const transporter = await getTransporter();
+  if (!transporter) return { ok: false, error: "SMTP not configured" };
+  const fromAddress = process.env.SMTP_FROM || process.env.SMTP_USER || "noreply@zvote.org";
+  try {
+    const info = await transporter.sendMail({
+      from: `"ZVote System Test" <${fromAddress}>`,
+      to: targetEmail,
+      subject: "ZVote — SMTP Email Delivery Verified Successfully!",
+      text: "Congratulations! Your ZVote live email delivery system is working perfectly.",
+      html: "<p>Congratulations! Your ZVote live email delivery system is working perfectly.</p>",
+    });
+    return { ok: true, messageId: info.messageId };
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
 }
 
 /**
