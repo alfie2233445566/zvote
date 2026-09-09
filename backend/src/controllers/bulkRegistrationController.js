@@ -192,7 +192,7 @@ export async function bulkRegisterStudents(req, res) {
     if (results.createdUsers.length > 0) {
       emailService.queueBulkRegistrationEmails(results.createdUsers);
       results.emailsSent = results.createdUsers.length;
-      results.emailStatus = (process.env.RESEND_API_KEY || process.env.SMTP_HOST || process.env.SMTP_SERVICE) ? "queued_for_delivery" : "smtp_not_configured";
+      results.emailStatus = (process.env.BREVO_API_KEY || process.env.RESEND_API_KEY || process.env.SMTP_HOST || process.env.SMTP_SERVICE) ? "queued_for_delivery" : "smtp_not_configured";
     }
 
     return res.status(201).json(results);
