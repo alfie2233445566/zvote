@@ -578,7 +578,7 @@ function RegisterVotersPanel() {
   function downloadCredentialsCsv() {
     if (!bulkResult?.createdUsers || bulkResult.createdUsers.length === 0) return;
 
-    const headers = ["Full Name", "Student ID", "Email", "Department", "Program", "Level", "Temporary Password"];
+    const headers = ["Full Name", "Student ID", "Email", "Department", "Program", "Level", "Password Hash (SHA-256)"];
     const rows = bulkResult.createdUsers.map((u) => [
       `"${u.fullName.replace(/"/g, '""')}"`,
       `"${u.studentId}"`,
@@ -677,7 +677,7 @@ function RegisterVotersPanel() {
                     Newly Created Accounts ({bulkResult.createdUsers.length})
                   </h4>
                   <span className="text-[11px] text-slate-500">
-                    Use these temporary credentials to log in and test voting
+                    Passwords cryptographically hashed for voter privacy &bull; Passwords sent to student inboxes
                   </span>
                 </div>
                 <div className="max-h-72 overflow-y-auto">
@@ -688,7 +688,7 @@ function RegisterVotersPanel() {
                         <th className="px-3 py-2">Student ID</th>
                         <th className="px-3 py-2">Email</th>
                         <th className="px-3 py-2">Department</th>
-                        <th className="px-3 py-2">Temp Password</th>
+                        <th className="px-3 py-2">Password Hash (SHA-256)</th>
                         <th className="px-3 py-2 text-right">Action</th>
                       </tr>
                     </thead>
@@ -699,14 +699,16 @@ function RegisterVotersPanel() {
                           <td className="px-3 py-2">{u.studentId}</td>
                           <td className="px-3 py-2 font-sans">{u.email}</td>
                           <td className="px-3 py-2 font-sans">{u.department}</td>
-                          <td className="px-3 py-2 bg-slate-50/80 font-bold text-zvote-700">{u.temporaryPassword}</td>
+                          <td className="px-3 py-2 bg-slate-50/80 text-[11px] text-slate-600 truncate max-w-[140px]" title={u.temporaryPassword}>
+                            {u.temporaryPassword}
+                          </td>
                           <td className="px-3 py-2 text-right font-sans">
                             <button
                               type="button"
                               onClick={() => copyPassword(u.studentId, u.temporaryPassword)}
-                              className="text-xs text-zvote-600 hover:text-zvote-800 font-medium"
+                              className="text-xs text-slate-500 hover:text-slate-800 font-medium"
                             >
-                              {copiedId === u.studentId ? "✓ Copied" : "Copy"}
+                              {copiedId === u.studentId ? "✓ Copied" : "Copy Hash"}
                             </button>
                           </td>
                         </tr>

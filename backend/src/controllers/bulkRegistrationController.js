@@ -195,7 +195,17 @@ export async function bulkRegisterStudents(req, res) {
       results.emailStatus = (process.env.BREVO_API_KEY || process.env.RESEND_API_KEY || process.env.SMTP_HOST || process.env.SMTP_SERVICE) ? "queued_for_delivery" : "smtp_not_configured";
     }
 
-    return res.status(201).json(results);
+    // For voter confidentiality and security, cryptographically hash temporary passwords before sending to admin
+    const adminSafeUsers = results.createdUsers.map((u) => ({
+      ...u,
+      temporaryPassword: "sha256:" + crypto.createHash("sha256").update(u.temporaryPassword).digest("hex").slice(0, 16) + "...",
+      passwordHashed: true,
+    }));
+
+    return res.status(201).json({
+      ...results,
+      createdUsers: adminSafeUsers,
+    });
   } catch (err) {
     console.error("bulkRegisterStudents failed:", err);
     return res.status(500).json({ error: "Failed to parse spreadsheet file: " + err.message });

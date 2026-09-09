@@ -20,10 +20,9 @@ export default function Navbar() {
   return (
     <nav className="bg-zvote-900 text-white sticky top-0 z-50 shadow-md">
       <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
-        <Link to="/" onClick={closeMenu} className="font-bold text-lg tracking-tight flex items-center gap-1">
+        <Link to="/" onClick={closeMenu} className="font-bold text-lg tracking-tight flex items-center">
           <span>Z</span>
           <span className="text-zvote-300">Vote</span>
-          <span className="text-[10px] bg-zvote-800 text-zvote-300 px-1.5 py-0.5 rounded border border-zvote-700 ml-1">Amoy</span>
         </Link>
 
         {user && (
