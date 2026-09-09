@@ -36,6 +36,8 @@ async function getTransporter() {
   }
 
   return null;
+}
+
 /**
  * Helper to send email via Resend HTTPS REST API (Port 443, 100% permitted on Render Free tier)
  */
