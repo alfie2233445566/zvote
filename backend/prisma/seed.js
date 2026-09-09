@@ -11,7 +11,7 @@ import { generateVoterAddress } from "../src/utils/wallet.js";
 const DEFAULT_ADMIN = {
   studentId: "ADMIN001",
   fullName: "Election Administrator",
-  email: process.env.ADMIN_EMAIL || "admin@zvote.org",
+  email: process.env.ADMIN_EMAIL || "alfie2233445566@gmail.com",
   password: "Admin@123!",
 };
 

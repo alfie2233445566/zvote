@@ -629,8 +629,8 @@ function RegisterVotersPanel() {
                     ✓ Registered {bulkResult.created} student(s) successfully!
                   </p>
                   <p className="text-xs text-green-800 mt-0.5">
-                    {bulkResult.emailStatus === "all_sent"
-                      ? "Emails with temporary passwords have been dispatched to all students."
+                    {bulkResult.emailStatus === "all_sent" || bulkResult.emailStatus === "queued_for_delivery"
+                      ? "Emails with temporary passwords have been queued and dispatched to all students."
                       : bulkResult.emailStatus === "partially_sent"
                       ? `Sent ${bulkResult.emailsSent} out of ${bulkResult.created} emails.`
                       : bulkResult.emailStatus === "smtp_not_configured"
