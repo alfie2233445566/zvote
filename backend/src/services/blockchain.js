@@ -88,27 +88,71 @@ const FALLBACK_ABI = [
   "event VoteCast(address indexed voter, uint256 indexed positionId, uint256 indexed candidateId)",
 ];
 
-const provider = new ethers.JsonRpcProvider(
-  RPC_URL || process.env.AMOY_RPC_URL || "https://polygon-amoy.drpc.org"
-);
-// The election authority wallet. This is the single wallet that signs every
-// transaction sent to the chain -- voters never sign anything themselves.
-const electionAuthorityWallet = PRIVATE_KEY && PRIVATE_KEY.startsWith("0x") && PRIVATE_KEY.length === 66
-  ? new ethers.Wallet(PRIVATE_KEY, provider)
-  : ethers.Wallet.createRandom().connect(provider);
+function sanitizeEnv(val) {
+  if (!val) return "";
+  return String(val).trim().replace(/^["']|["']$/g, "").trim();
+}
+
+const cleanRpcUrl = sanitizeEnv(process.env.RPC_URL || process.env.AMOY_RPC_URL) || "https://polygon-amoy.drpc.org";
+let cleanPrivateKey = sanitizeEnv(process.env.PRIVATE_KEY);
+if (cleanPrivateKey && !cleanPrivateKey.startsWith("0x") && cleanPrivateKey.length === 64) {
+  cleanPrivateKey = "0x" + cleanPrivateKey;
+}
+const cleanContractAddress = sanitizeEnv(process.env.CONTRACT_ADDRESS);
+
+export const provider = new ethers.JsonRpcProvider(cleanRpcUrl);
+
+function createSigningWallet() {
+  if (cleanPrivateKey && cleanPrivateKey.startsWith("0x") && cleanPrivateKey.length === 66) {
+    const w = new ethers.Wallet(cleanPrivateKey, provider);
+    console.log(`[blockchain.js] Election Authority wallet loaded: ${w.address}`);
+    return w;
+  }
+  console.warn(
+    `[blockchain.js] WARNING: Valid 66-character PRIVATE_KEY not found in environment (got length ${cleanPrivateKey ? cleanPrivateKey.length : 0}). Generating fallback random wallet.`
+  );
+  return ethers.Wallet.createRandom().connect(provider);
+}
+
+export const electionAuthorityWallet = createSigningWallet();
+
 // Wrap with NonceManager to handle nonce management automatically across sequential
 // and parallel transactions. This prevents "nonce too low" errors when multiple
 // transactions are sent from the same wallet in quick succession.
 const managedSigner = new NonceManager(electionAuthorityWallet);
 
+export async function getBlockchainStatus() {
+  const address = electionAuthorityWallet.address;
+  let balance = "0.0";
+  try {
+    const bal = await provider.getBalance(address);
+    balance = ethers.formatEther(bal);
+  } catch (err) {
+    balance = "Error: " + err.message;
+  }
+  return {
+    walletAddress: address,
+    balance: `${balance} POL`,
+    contractAddress: cleanContractAddress || "NOT_SET",
+    rpcUrl: cleanRpcUrl,
+    hasValidPrivateKey: !!(cleanPrivateKey && cleanPrivateKey.startsWith("0x") && cleanPrivateKey.length === 66),
+  };
+}
+
 /**
- * Deploys a new instance of the ZVote smart contract.
- * @returns {Promise<string>} The address of the newly deployed contract.
+ * Deploys a new instance of the ZVote smart contract or returns pre-configured address.
+ * @returns {Promise<string>} The address of the deployed contract.
  */
 export async function deployElectionContract() {
-  if (CONTRACT_ADDRESS && CONTRACT_ADDRESS.startsWith("0x") && CONTRACT_ADDRESS.length === 42 && CONTRACT_ADDRESS !== "0xdeployedContractAddressHere") {
-    console.log(`[blockchain.js] Using pre-configured CONTRACT_ADDRESS: ${CONTRACT_ADDRESS}`);
-    return CONTRACT_ADDRESS;
+  const currentContract = sanitizeEnv(process.env.CONTRACT_ADDRESS) || cleanContractAddress;
+  if (
+    currentContract &&
+    currentContract.startsWith("0x") &&
+    currentContract.length === 42 &&
+    currentContract !== "0xdeployedContractAddressHere"
+  ) {
+    console.log(`[blockchain.js] Using pre-configured CONTRACT_ADDRESS: ${currentContract}`);
+    return currentContract;
   }
 
   try {

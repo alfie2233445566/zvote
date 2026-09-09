@@ -197,7 +197,11 @@ function CreateElectionPanel() {
       setTargetDepartment("");
       setPositions([emptyPosition()]);
     } catch (err) {
-      setMessage({ type: "error", text: err.response?.data?.error || "Failed to create election." });
+      let rawMsg = err.response?.data?.error || err.message || "Failed to create election.";
+      if (rawMsg.includes("insufficient funds") || rawMsg.includes("INSUFFICIENT_FUNDS")) {
+        rawMsg = "Blockchain Gas Error: The backend signing wallet does not have sufficient testnet POL gas to complete this transaction on Polygon Amoy. Please check your backend PRIVATE_KEY and wallet balance.";
+      }
+      setMessage({ type: "error", text: rawMsg });
     } finally {
       setSubmitting(false);
     }
@@ -503,13 +507,15 @@ function CreateElectionPanel() {
       </div>
 
       {message && (
-        <p
-          className={`text-sm rounded-md px-3 py-2 ${
-            message.type === "success" ? "bg-green-50 text-green-700" : "bg-red-50 text-red-600"
+        <div
+          className={`text-sm rounded-lg p-3.5 break-words overflow-hidden border ${
+            message.type === "success"
+              ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+              : "bg-red-50 text-red-700 border-red-200"
           }`}
         >
           {message.text}
-        </p>
+        </div>
       )}
 
       <button

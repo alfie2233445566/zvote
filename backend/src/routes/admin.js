@@ -40,6 +40,12 @@ router.post("/test-email", requireAuth, requireAdmin, async (req, res) => {
   return res.json(result);
 });
 
+router.get("/blockchain-status", requireAuth, requireAdmin, async (req, res) => {
+  const { getBlockchainStatus } = await import("../services/blockchain.js");
+  const status = await getBlockchainStatus();
+  return res.json(status);
+});
+
 // Admin students view
 router.get("/students", requireAuth, requireAdmin, getStudents);
 router.get("/departments", requireAuth, requireAdmin, getDepartments);
